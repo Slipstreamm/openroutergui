@@ -96,7 +96,10 @@ class UserSettings {
 class SyncService extends ChangeNotifier {
   // The URL of your Discord bot's API
   // This should be the server where your Discord bot is running
-  static const String botApiUrl = 'https://slipstreamm.dev/discordapi';
+  static const String botApiUrl = 'https://slipstreamm.dev/api';
+
+  // For backward compatibility, we also define the old API URL
+  static const String oldBotApiUrl = 'https://slipstreamm.dev/discordapi';
 
   // Discord OAuth service for authentication
   final DiscordOAuthService _authService;
@@ -163,8 +166,14 @@ class SyncService extends ChangeNotifier {
 
       debugPrint('Sending GET request to $botApiUrl/settings');
 
-      // Get settings from the bot API
-      final response = await http.get(Uri.parse('$botApiUrl/settings'), headers: {'Authorization': authHeader});
+      // Try the new API endpoint first
+      var response = await http.get(Uri.parse('$botApiUrl/settings'), headers: {'Authorization': authHeader});
+
+      // If the new endpoint fails with a 404, try the old endpoint for backward compatibility
+      if (response.statusCode == 404) {
+        debugPrint('New API endpoint not found, trying old endpoint at $oldBotApiUrl/settings');
+        response = await http.get(Uri.parse('$oldBotApiUrl/settings'), headers: {'Authorization': authHeader});
+      }
 
       if (response.statusCode != 200) {
         debugPrint('Failed to get settings: ${response.statusCode} - ${response.body}');
@@ -297,14 +306,25 @@ class SyncService extends ChangeNotifier {
       debugPrint('Sending sync request to $botApiUrl/sync');
       debugPrint('Request contains ${conversationsJson.length} conversations');
 
-      // Send the conversations to the bot API
-      final response = await http.post(
+      // Try the new API endpoint first
+      var response = await http.post(
         Uri.parse('$botApiUrl/sync'),
         headers: {'Content-Type': 'application/json', 'Authorization': authHeader},
         body: jsonEncode(requestBody),
       );
 
       debugPrint('Received response with status code: ${response.statusCode}');
+
+      // If the new endpoint fails with a 404, try the old endpoint for backward compatibility
+      if (response.statusCode == 404) {
+        debugPrint('New API endpoint not found, trying old endpoint at $oldBotApiUrl/sync');
+        response = await http.post(
+          Uri.parse('$oldBotApiUrl/sync'),
+          headers: {'Content-Type': 'application/json', 'Authorization': authHeader},
+          body: jsonEncode(requestBody),
+        );
+        debugPrint('Received response from old endpoint with status code: ${response.statusCode}');
+      }
 
       if (response.statusCode != 200) {
         _syncError = 'Sync failed: ${response.statusCode} - ${response.body}';
@@ -387,8 +407,14 @@ class SyncService extends ChangeNotifier {
         return null;
       }
 
-      // Get conversations from the bot API
-      final response = await http.get(Uri.parse('$botApiUrl/conversations'), headers: {'Authorization': authHeader});
+      // Try the new API endpoint first
+      var response = await http.get(Uri.parse('$botApiUrl/conversations'), headers: {'Authorization': authHeader});
+
+      // If the new endpoint fails with a 404, try the old endpoint for backward compatibility
+      if (response.statusCode == 404) {
+        debugPrint('New API endpoint not found, trying old endpoint at $oldBotApiUrl/conversations');
+        response = await http.get(Uri.parse('$oldBotApiUrl/conversations'), headers: {'Authorization': authHeader});
+      }
 
       if (response.statusCode != 200) {
         _syncError = 'Failed to get conversations: ${response.statusCode} - ${response.body}';

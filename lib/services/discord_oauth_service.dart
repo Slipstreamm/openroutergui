@@ -10,7 +10,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 class DiscordOAuthService {
   // Discord OAuth2 constants
   static const String clientId = '1360717457852993576';
-  static const String redirectUri = 'https://slipstreamm.dev/discordapi/auth';
+  static const String redirectUri = 'https://slipstreamm.dev/api/auth';
   static const String discordApiUrl = 'https://discord.com/api';
   static const String tokenEndpoint = '$discordApiUrl/oauth2/token';
   static const String userEndpoint = '$discordApiUrl/users/@me';
