@@ -196,8 +196,8 @@ class SyncService extends ChangeNotifier {
         return false;
       }
 
-      // Parse the response
-      final responseData = jsonDecode(response.body);
+      // Parse the response with UTF-8 encoding
+      final responseData = jsonDecode(utf8.decode(response.bodyBytes));
 
       // Check if we got user settings back
       if (responseData['settings'] != null) {
@@ -368,9 +368,9 @@ class SyncService extends ChangeNotifier {
         return false;
       }
 
-      // Parse the response
+      // Parse the response with UTF-8 encoding
       debugPrint('Parsing response...');
-      final responseData = jsonDecode(response.body);
+      final responseData = jsonDecode(utf8.decode(response.bodyBytes));
       debugPrint('Response parsed successfully');
 
       // Check if we got user settings back
@@ -468,8 +468,8 @@ class SyncService extends ChangeNotifier {
         return null;
       }
 
-      // Parse the response
-      final responseData = jsonDecode(response.body);
+      // Parse the response with UTF-8 encoding
+      final responseData = jsonDecode(utf8.decode(response.bodyBytes));
       final conversationsJson = responseData['conversations'] as List<dynamic>;
 
       // Convert to Conversation objects

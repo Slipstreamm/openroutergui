@@ -63,7 +63,7 @@ def load_conversations():
     global user_conversations
     if os.path.exists(SYNC_DATA_FILE):
         try:
-            with open(SYNC_DATA_FILE, "r") as f:
+            with open(SYNC_DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 # Convert string keys (user IDs) back to strings
                 user_conversations = {k: [SyncedConversation.model_validate(conv) for conv in v]
@@ -81,8 +81,8 @@ def save_conversations():
             user_id: [conv.model_dump() for conv in convs]
             for user_id, convs in user_conversations.items()
         }
-        with open(SYNC_DATA_FILE, "w") as f:
-            json.dump(serializable_data, f, indent=2, default=str)
+        with open(SYNC_DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(serializable_data, f, indent=2, default=str, ensure_ascii=False)
     except Exception as e:
         print(f"Error saving synced conversations: {e}")
 
