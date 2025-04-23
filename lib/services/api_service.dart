@@ -8,7 +8,7 @@ import 'discord_oauth_service.dart';
 /// Service for interacting with the unified API
 class ApiService extends ChangeNotifier {
   // The URL of the API server
-  static const String apiUrl = 'https://slipstreamm.dev/api';
+  static const String apiUrl = 'https://slipstreamm.dev/api'; // This now points to the unified API service
 
   // Discord OAuth service for authentication
   final DiscordOAuthService _authService;
