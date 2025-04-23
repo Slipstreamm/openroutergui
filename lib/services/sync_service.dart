@@ -99,7 +99,12 @@ class SyncService extends ChangeNotifier {
   static const String botApiUrl = 'https://slipstreamm.dev/api';
 
   // For backward compatibility, we also define the old API URL
+  // This will be deprecated in the future
   static const String oldBotApiUrl = 'https://slipstreamm.dev/discordapi';
+
+  // Flag to track if we should use the old API URL
+  // This will be set to true if the new API URL returns a 404
+  static bool _useOldApiUrl = false;
 
   // Discord OAuth service for authentication
   final DiscordOAuthService _authService;
@@ -164,14 +169,23 @@ class SyncService extends ChangeNotifier {
         return false;
       }
 
-      debugPrint('Sending GET request to $botApiUrl/settings');
+      // Determine which API URL to use
+      final apiUrl = _useOldApiUrl ? oldBotApiUrl : botApiUrl;
+      debugPrint('Using API URL: $apiUrl');
+      debugPrint('Sending GET request to $apiUrl/settings');
 
-      // Try the new API endpoint first
-      var response = await http.get(Uri.parse('$botApiUrl/settings'), headers: {'Authorization': authHeader});
+      // Send the request to the selected API endpoint
+      var response = await http.get(Uri.parse('$apiUrl/settings'), headers: {'Authorization': authHeader});
 
-      // If the new endpoint fails with a 404, try the old endpoint for backward compatibility
-      if (response.statusCode == 404) {
+      // Check for deprecation warning header
+      if (response.headers.containsKey('X-API-Deprecation-Warning')) {
+        debugPrint('WARNING: ${response.headers['X-API-Deprecation-Warning']}');
+      }
+
+      // If the new endpoint fails with a 404 and we're not already using the old URL, try the old endpoint
+      if (response.statusCode == 404 && !_useOldApiUrl) {
         debugPrint('New API endpoint not found, trying old endpoint at $oldBotApiUrl/settings');
+        _useOldApiUrl = true; // Remember to use the old URL for future requests
         response = await http.get(Uri.parse('$oldBotApiUrl/settings'), headers: {'Authorization': authHeader});
       }
 
@@ -303,21 +317,30 @@ class SyncService extends ChangeNotifier {
       // Prepare the request body
       final requestBody = {'conversations': conversationsJson, 'last_sync_time': _lastSyncTime?.toIso8601String(), 'user_settings': userSettings.toJson()};
 
-      debugPrint('Sending sync request to $botApiUrl/sync');
+      // Determine which API URL to use
+      final apiUrl = _useOldApiUrl ? oldBotApiUrl : botApiUrl;
+      debugPrint('Using API URL: $apiUrl');
+      debugPrint('Sending sync request to $apiUrl/sync');
       debugPrint('Request contains ${conversationsJson.length} conversations');
 
-      // Try the new API endpoint first
+      // Send the request to the selected API endpoint
       var response = await http.post(
-        Uri.parse('$botApiUrl/sync'),
+        Uri.parse('$apiUrl/sync'),
         headers: {'Content-Type': 'application/json', 'Authorization': authHeader},
         body: jsonEncode(requestBody),
       );
 
       debugPrint('Received response with status code: ${response.statusCode}');
 
-      // If the new endpoint fails with a 404, try the old endpoint for backward compatibility
-      if (response.statusCode == 404) {
+      // Check for deprecation warning header
+      if (response.headers.containsKey('X-API-Deprecation-Warning')) {
+        debugPrint('WARNING: ${response.headers['X-API-Deprecation-Warning']}');
+      }
+
+      // If the new endpoint fails with a 404 and we're not already using the old URL, try the old endpoint
+      if (response.statusCode == 404 && !_useOldApiUrl) {
         debugPrint('New API endpoint not found, trying old endpoint at $oldBotApiUrl/sync');
+        _useOldApiUrl = true; // Remember to use the old URL for future requests
         response = await http.post(
           Uri.parse('$oldBotApiUrl/sync'),
           headers: {'Content-Type': 'application/json', 'Authorization': authHeader},
@@ -407,12 +430,23 @@ class SyncService extends ChangeNotifier {
         return null;
       }
 
-      // Try the new API endpoint first
-      var response = await http.get(Uri.parse('$botApiUrl/conversations'), headers: {'Authorization': authHeader});
+      // Determine which API URL to use
+      final apiUrl = _useOldApiUrl ? oldBotApiUrl : botApiUrl;
+      debugPrint('Using API URL: $apiUrl');
+      debugPrint('Sending GET request to $apiUrl/conversations');
 
-      // If the new endpoint fails with a 404, try the old endpoint for backward compatibility
-      if (response.statusCode == 404) {
+      // Send the request to the selected API endpoint
+      var response = await http.get(Uri.parse('$apiUrl/conversations'), headers: {'Authorization': authHeader});
+
+      // Check for deprecation warning header
+      if (response.headers.containsKey('X-API-Deprecation-Warning')) {
+        debugPrint('WARNING: ${response.headers['X-API-Deprecation-Warning']}');
+      }
+
+      // If the new endpoint fails with a 404 and we're not already using the old URL, try the old endpoint
+      if (response.statusCode == 404 && !_useOldApiUrl) {
         debugPrint('New API endpoint not found, trying old endpoint at $oldBotApiUrl/conversations');
+        _useOldApiUrl = true; // Remember to use the old URL for future requests
         response = await http.get(Uri.parse('$oldBotApiUrl/conversations'), headers: {'Authorization': authHeader});
       }
 

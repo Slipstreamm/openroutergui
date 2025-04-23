@@ -10,7 +10,11 @@ import 'package:url_launcher/url_launcher_string.dart';
 class DiscordOAuthService {
   // Discord OAuth2 constants
   static const String clientId = '1360717457852993576';
+  // New redirect URI using the /api endpoint
   static const String redirectUri = 'https://slipstreamm.dev/api/auth';
+
+  // Old redirect URI for backward compatibility
+  static const String oldRedirectUri = 'https://slipstreamm.dev/discordapi/auth';
   static const String discordApiUrl = 'https://discord.com/api';
   static const String tokenEndpoint = '$discordApiUrl/oauth2/token';
   static const String userEndpoint = '$discordApiUrl/users/@me';
@@ -144,13 +148,15 @@ class DiscordOAuthService {
       // We need identify scope to get user info
       final authUrl = Uri.https('discord.com', '/api/oauth2/authorize', {
         'client_id': clientId,
-        'redirect_uri': redirectUri,
+        'redirect_uri': redirectUri, // Use the new redirect URI
         'response_type': 'code',
         'scope': 'identify',
         'state': state,
         'code_challenge': codeChallenge,
         'code_challenge_method': 'S256',
       });
+
+      debugPrint('Using redirect URI: $redirectUri');
 
       // Launch the browser for authentication with platform-specific handling
       bool launchSuccess = false;
@@ -219,11 +225,24 @@ class DiscordOAuthService {
       }
 
       // Exchange the code for an access token
-      final tokenResponse = await http.post(
+      // Try with the new redirect URI first
+      var tokenResponse = await http.post(
         Uri.parse(tokenEndpoint),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {'client_id': clientId, 'grant_type': 'authorization_code', 'code': code, 'redirect_uri': redirectUri, 'code_verifier': savedCodeVerifier},
       );
+
+      // If that fails, try with the old redirect URI
+      if (tokenResponse.statusCode != 200) {
+        debugPrint('Failed to get token with new redirect URI: ${tokenResponse.body}');
+        debugPrint('Trying with old redirect URI: $oldRedirectUri');
+
+        tokenResponse = await http.post(
+          Uri.parse(tokenEndpoint),
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: {'client_id': clientId, 'grant_type': 'authorization_code', 'code': code, 'redirect_uri': oldRedirectUri, 'code_verifier': savedCodeVerifier},
+        );
+      }
 
       // Clear the code verifier after use
       await prefsForVerifier.remove(codeVerifierKey);
