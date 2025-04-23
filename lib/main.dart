@@ -102,8 +102,19 @@ class MyApp extends StatelessWidget {
                   // Force a save of conversations to ensure they're properly saved
                   await chatModel.forceSaveConversations();
                   debugPrint('Forced save of conversations on app start');
+
+                  // Add listener for automatically synced conversations
+                  syncService.addListener(() {
+                    if (syncService.lastSyncedConversations != null) {
+                      debugPrint('SyncService notified with new conversations, importing into ChatModel...');
+                      chatModel.importConversations(syncService.lastSyncedConversations!);
+                      // Optionally clear the list in SyncService after import?
+                      // syncService.clearLastSyncedConversations(); // Need to add this method if desired
+                    }
+                  });
+                  debugPrint('Added listener to SyncService for conversation updates.');
                 } else {
-                  debugPrint('User is not logged in, skipping auto sync service');
+                  debugPrint('User is not logged in, skipping auto sync service and listener setup');
                 }
               }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:collection/collection.dart'; // Import collection package
 import '../services/openrouter_service.dart';
 import '../services/sync_service.dart';
 import 'message.dart';
@@ -123,7 +124,9 @@ class ChatModel extends ChangeNotifier {
   // Getters
   List<Conversation> get conversations => List.unmodifiable(_conversations);
   Conversation? get activeConversation =>
-      _activeConversationId != null ? _conversations.firstWhere((c) => c.id == _activeConversationId, orElse: () => _createNewConversation()) : null;
+      _activeConversationId != null
+          ? _conversations.firstWhereOrNull((c) => c.id == _activeConversationId) // Use firstWhereOrNull
+          : null;
   List<Message> get messages => activeConversation?.messages ?? [];
   bool get isLoading => _isLoading;
   String get selectedModel => _selectedModel;
@@ -245,12 +248,13 @@ class ChatModel extends ChangeNotifier {
     _activeConversationId = id;
 
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
     return conversation;
   }
 
   // Create a new conversation
-  Conversation _createNewConversation() {
+  Future<Conversation> _createNewConversation() async {
+    // Add async and Future return type
     final id = 'conv_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(1000)}';
 
     // Create conversation with current global settings
@@ -278,7 +282,7 @@ class ChatModel extends ChangeNotifier {
     _loadAndApplyGlobalSettings(conversation);
 
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
     return conversation;
   }
 
@@ -362,7 +366,8 @@ class ChatModel extends ChangeNotifier {
   }
 
   // Delete a conversation
-  void deleteConversation(String conversationId) {
+  Future<void> deleteConversation(String conversationId) async {
+    // Add async and Future return type
     final index = _conversations.indexWhere((c) => c.id == conversationId);
     if (index >= 0) {
       _conversations.removeAt(index);
@@ -373,33 +378,36 @@ class ChatModel extends ChangeNotifier {
       }
 
       notifyListeners();
-      _saveConversations();
-      _saveActiveConversationId();
+      await _saveConversations(); // Await save
+      await _saveActiveConversationId(); // Await save
     }
   }
 
   // Rename a conversation
-  void renameConversation(String conversationId, String newTitle) {
+  Future<void> renameConversation(String conversationId, String newTitle) async {
+    // Add async and Future return type
     final conversation = _conversations.firstWhere((c) => c.id == conversationId, orElse: () => throw Exception('Conversation not found'));
     conversation.updateTitle(newTitle);
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
   }
 
   // Add a new message from the user
-  void addUserMessage(String content) {
+  Future<void> addUserMessage(String content) async {
+    // Add async and Future return type
     if (activeConversation == null) {
-      _createNewConversation();
+      await _createNewConversation(); // Await the async creation
     }
 
     final message = Message(content: content, role: MessageRole.user);
     activeConversation!.addMessage(message);
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
   }
 
   // Add a response from the assistant
-  void addAssistantMessage(dynamic response) {
+  Future<void> addAssistantMessage(dynamic response) async {
+    // Add async and Future return type
     if (activeConversation == null) return;
 
     String content;
@@ -419,11 +427,12 @@ class ChatModel extends ChangeNotifier {
     final message = Message(content: content, role: MessageRole.assistant, reasoning: reasoning, usageData: usageData);
     activeConversation!.addMessage(message);
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
   }
 
   // Set system message (typically at the beginning of the conversation)
-  void setSystemMessage(String content) {
+  Future<void> setSystemMessage(String content) async {
+    // Add async and Future return type
     if (activeConversation == null) return;
 
     // Remove any existing system messages
@@ -437,7 +446,7 @@ class ChatModel extends ChangeNotifier {
     activeConversation!.systemMessage = content;
 
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
   }
 
   // Get a conversation by ID
@@ -450,15 +459,17 @@ class ChatModel extends ChangeNotifier {
   }
 
   // Update character-related settings for a conversation
-  void updateConversationCharacterSettings(
+  Future<void> updateConversationCharacterSettings(
+    // Already async
     String conversationId,
     String? character,
     String? characterInfo,
     bool characterBreakdown,
     String? customInstructions,
-  ) {
+  ) async {
+    // Add async keyword
     final conversation = getConversationById(conversationId);
-    if (conversation == null) return;
+    if (conversation == null) return; // Explicit return for void Future
 
     conversation.character = character;
     conversation.characterInfo = characterInfo;
@@ -467,11 +478,12 @@ class ChatModel extends ChangeNotifier {
     conversation.updatedAt = DateTime.now();
 
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
   }
 
   // Update general conversation settings by ID
-  void updateConversationSettingsById({
+  Future<void> updateConversationSettingsById({
+    // Already async
     required String conversationId,
     double? temperature,
     int? maxTokens,
@@ -479,9 +491,10 @@ class ChatModel extends ChangeNotifier {
     String? reasoningEffort,
     bool? webSearchEnabled,
     String? systemMessage,
-  }) {
+  }) async {
+    // Add async keyword
     final conversation = getConversationById(conversationId);
-    if (conversation == null) return;
+    if (conversation == null) return; // Explicit return for void Future
 
     if (temperature != null) conversation.temperature = temperature;
     if (maxTokens != null) conversation.maxTokens = maxTokens;
@@ -492,34 +505,37 @@ class ChatModel extends ChangeNotifier {
     conversation.updatedAt = DateTime.now();
 
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
   }
 
   // Edit a message
-  void editMessage(int index, String newContent) {
+  Future<void> editMessage(int index, String newContent) async {
+    // Add async and Future return type
     if (activeConversation == null) return;
 
     activeConversation!.editMessage(index, newContent);
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
   }
 
   // Delete a message
-  void deleteMessage(int index) {
+  Future<void> deleteMessage(int index) async {
+    // Add async and Future return type
     if (activeConversation == null) return;
 
     activeConversation!.deleteMessage(index);
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
   }
 
   // Clear all messages in the active conversation
-  void clearMessages() {
+  Future<void> clearMessages() async {
+    // Add async and Future return type
     if (activeConversation == null) return;
 
     activeConversation!.messages.clear();
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
   }
 
   // Set loading state
@@ -529,7 +545,8 @@ class ChatModel extends ChangeNotifier {
   }
 
   // Set selected model
-  void setSelectedModel(String model) {
+  Future<void> setSelectedModel(String model) async {
+    // Add async and Future return type
     _selectedModel = model;
 
     // Update the model for the active conversation
@@ -538,8 +555,8 @@ class ChatModel extends ChangeNotifier {
     }
 
     notifyListeners();
-    _saveSelectedModel();
-    _saveConversations();
+    await _saveSelectedModel(); // Await save
+    await _saveConversations(); // Await save
   }
 
   // Set error message
@@ -576,7 +593,8 @@ class ChatModel extends ChangeNotifier {
   }
 
   // Cancel the current streaming response
-  void cancelStreamingResponse() {
+  Future<void> cancelStreamingResponse() async {
+    // Add async and Future return type
     if (!_isStreaming) return;
 
     // Cancel the API stream
@@ -610,7 +628,7 @@ class ChatModel extends ChangeNotifier {
         usageData: activeConversation!.messages[lastIndex].usageData,
       );
       notifyListeners();
-      _saveConversations();
+      await _saveConversations(); // Await save
     }
   }
 
@@ -720,7 +738,8 @@ class ChatModel extends ChangeNotifier {
   }
 
   // Finalize the streaming response
-  void finalizeStreamingResponse() {
+  Future<void> finalizeStreamingResponse() async {
+    // Add async and Future return type
     // Clean up any temporary markdown fixes in the final content
     if (activeConversation != null && activeConversation!.messages.isNotEmpty && activeConversation!.messages.last.role == MessageRole.assistant) {
       final lastIndex = activeConversation!.messages.length - 1;
@@ -746,7 +765,7 @@ class ChatModel extends ChangeNotifier {
     }
 
     // Save conversations to persistent storage
-    _saveConversations();
+    await _saveConversations(); // Await save
     _currentStreamingContent = '';
     _isStreaming = false;
     notifyListeners();
@@ -1152,14 +1171,15 @@ class ChatModel extends ChangeNotifier {
       activeConversation!.updatedAt = DateTime.now();
 
       notifyListeners();
-      _saveConversations();
+      await _saveConversations(); // Await save
     } else {
       notifyListeners();
     }
   }
 
   // Update conversation-specific settings
-  void updateConversationSettings({
+  Future<void> updateConversationSettings({
+    // Already async
     String? conversationId,
     bool? reasoningEnabled,
     String? reasoningEffort,
@@ -1167,14 +1187,15 @@ class ChatModel extends ChangeNotifier {
     int? maxTokens,
     bool? webSearchEnabled,
     String? systemMessage,
-  }) {
+  }) async {
+    // Add async keyword
     // Get the conversation to update
     final conversation =
         conversationId != null
             ? _conversations.firstWhere((c) => c.id == conversationId, orElse: () => throw Exception('Conversation not found'))
             : activeConversation;
 
-    if (conversation == null) return;
+    if (conversation == null) return; // Explicit return for void Future
 
     // Update the settings
     conversation.updateSettings(
@@ -1198,7 +1219,7 @@ class ChatModel extends ChangeNotifier {
     }
 
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save
   }
 
   // Save reasoning settings to SharedPreferences
@@ -1234,7 +1255,8 @@ class ChatModel extends ChangeNotifier {
   }
 
   // Import a conversation from Discord or other source
-  void importConversation(Conversation conversation) {
+  Future<void> importConversation(Conversation conversation) async {
+    // Add async and Future return type
     // Check if a conversation with this ID already exists
     final existingIndex = _conversations.indexWhere((c) => c.id == conversation.id);
 
@@ -1249,13 +1271,14 @@ class ChatModel extends ChangeNotifier {
     }
 
     notifyListeners();
-    _saveConversations();
+    await _saveConversations(); // Await save (already added, just confirming)
   }
 
   // Import multiple conversations
-  void importConversations(List<Conversation> conversations) {
+  Future<void> importConversations(List<Conversation> conversations) async {
+    // Add async and Future return type
     for (final conversation in conversations) {
-      importConversation(conversation);
+      await importConversation(conversation); // Await the async import
     }
   }
 

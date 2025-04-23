@@ -115,6 +115,7 @@ class SyncService extends ChangeNotifier {
   String? _syncError;
   Timer? _autoSyncTimer;
   bool _settingsUpdatedFromDiscord = false; // Flag to indicate settings were updated from Discord
+  List<Conversation>? _syncedConversations; // Hold fetched conversations
 
   // Getters
   bool get isSyncing => _isSyncing;
@@ -124,6 +125,7 @@ class SyncService extends ChangeNotifier {
   String? get userId => _authService.userId;
   String? get username => _authService.username;
   bool get settingsUpdatedFromDiscord => _settingsUpdatedFromDiscord;
+  List<Conversation>? get lastSyncedConversations => _syncedConversations; // Getter for fetched conversations
 
   // Constructor
   SyncService(this._authService) {
@@ -263,7 +265,16 @@ class SyncService extends ChangeNotifier {
     // Set up a timer to sync every 5 minutes
     _autoSyncTimer = Timer.periodic(const Duration(minutes: 5), (timer) async {
       if (_authService.isLoggedIn && !_isSyncing) {
-        await syncUserSettings();
+        debugPrint('Auto-sync triggered...');
+        // Sync settings first
+        bool settingsSynced = await syncUserSettings();
+        if (settingsSynced) {
+          debugPrint('Auto-sync: Settings synced successfully. Fetching conversations...');
+          // Then fetch conversations
+          await getConversationsFromBot(); // This will notify listeners if successful
+        } else {
+          debugPrint('Auto-sync: Settings sync failed. Skipping conversation fetch.');
+        }
       }
     });
   }
@@ -468,8 +479,9 @@ class SyncService extends ChangeNotifier {
               .whereType<Conversation>() // Filter out nulls
               .toList();
 
+      _syncedConversations = conversations; // Store fetched conversations
       _isSyncing = false;
-      notifyListeners();
+      notifyListeners(); // Notify listeners about new conversations
 
       return conversations;
     } catch (e) {
